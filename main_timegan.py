@@ -20,26 +20,27 @@ main_timegan.py
   - Discriminative score
   - Predictive score
 """
-
 ## Necessary packages
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+#import os
+#os.environ["KMP_AFFINITY"] = "none" # no affinity
 import argparse
 import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
 # 1. TimeGAN model
-from timegan import timegan
+from timegan import timegan, generate_data
 # 2. Data loading
 from data_loading import real_data_loading, sine_data_generation
 # 3. Metrics
 from metrics.discriminative_metrics import discriminative_score_metrics
 from metrics.predictive_metrics import predictive_score_metrics
 from metrics.visualization_metrics import visualization
-
+import pickle
 
 def main (args):
   """Main function for timeGAN experiments.
@@ -61,15 +62,19 @@ def main (args):
     - metric_results: discriminative and predictive scores
   """
   ## Data loading
-  if args.data_name in ['stock', 'energy']:
+  if args.data_name in ['stock', 'energy', 'head']:
     ori_data = real_data_loading(args.data_name, args.seq_len)
   elif args.data_name == 'sine':
     # Set number of samples and its dimensions
-    no, dim = 10000, 5
+    no, dim = 1000, 5
     ori_data = sine_data_generation(no, args.seq_len, dim)
-    
+  print("THESIZE", len(ori_data), ori_data[0][0,:], np.min(np.array(ori_data)), np.max(np.array(ori_data)))  
+  pickle.dump(ori_data, open("oridata.out", "wb"))
   print(args.data_name + ' dataset is ready.')
-    
+  print(len(ori_data), "samples of shape", ori_data[0].shape)
+  # print(ori_data[0][0,:])
+  # ori_data = [np.roll(data, 1, axis=1) for data in ori_data]
+  # print(ori_data[0][0,:])
   ## Synthetic data generation by TimeGAN
   # Set newtork parameters
   parameters = dict()  
@@ -77,9 +82,12 @@ def main (args):
   parameters['hidden_dim'] = args.hidden_dim
   parameters['num_layer'] = args.num_layer
   parameters['iterations'] = args.iteration
+  parameters['generate_interval'] = args.generate_interval
   parameters['batch_size'] = args.batch_size
-      
-  generated_data = timegan(ori_data, parameters)   
+  parameters['learning_rate'] = args.learning_rate
+
+  generated_data = timegan(ori_data, parameters)
+  pickle.dump(generated_data, open("gendata.out", "wb"))
   print('Finish Synthetic Data Generation')
   
   ## Performance metrics   
@@ -118,7 +126,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument(
       '--data_name',
-      choices=['sine','stock','energy'],
+      choices=['sine','stock','energy', 'head'],
       default='stock',
       type=str)
   parser.add_argument(
@@ -147,10 +155,21 @@ if __name__ == '__main__':
       default=50000,
       type=int)
   parser.add_argument(
+      '--generate_interval',
+      help='Run generation intermittently every generate_interval iterations (0 for off)',
+      default=0,
+      type=int)
+  parser.add_argument(
       '--batch_size',
       help='the number of samples in mini-batch (should be optimized)',
       default=128,
       type=int)
+  parser.add_argument(
+      '--learning_rate',
+      help='the learning rate for all optimizers (should be optimized)',
+      default=0.001,
+      type=float)
+
   parser.add_argument(
       '--metric_iteration',
       help='iterations of the metric computation',

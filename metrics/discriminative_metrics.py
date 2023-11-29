@@ -106,10 +106,12 @@ def discriminative_score_metrics (ori_data, generated_data):
     
   # Training step
   for itt in range(iterations):
-          
+    np.random.shuffle(train_x)
+    np.random.shuffle(train_x_hat)
+
     # Batch setting
-    X_mb, T_mb = batch_generator(train_x, train_t, batch_size)
-    X_hat_mb, T_hat_mb = batch_generator(train_x_hat, train_t_hat, batch_size)
+    X_mb, T_mb = batch_generator(train_x, train_t, batch_size,0)
+    X_hat_mb, T_hat_mb = batch_generator(train_x_hat, train_t_hat, batch_size,0)
           
     # Train discriminator
     _, step_d_loss = sess.run([d_solver, d_loss], 
